@@ -34,13 +34,13 @@ def build_circle_list():
 	
 if (__name__ == "__main__") :
 	
-	xbin_width_um = 200 
+	xbin_width_um = 50 
 	xmax_um		  = 15000
 	
 	circle_list = build_circle_list()
 
 	print ("found " + str(len(circle_list)) + " circles")
-	
+	#############################################################################
 	XBinsBounds = range (0, xmax_um, xbin_width_um)
 	Xbins=[]
 	for bin in range (0, len(XBinsBounds), 1):
@@ -55,7 +55,7 @@ if (__name__ == "__main__") :
 			i = i + 1
 	
 	file_out = open (path + "circles_radius_avg.rep", "w")
-	
+	#############################################################################
 	for Xbin in Xbins[:-1]: 
 		group_radius_avg = 0
 
