@@ -2,92 +2,69 @@ __author__ = 'Administrator'
 import json
 #####################################################
 class circle():
-	def __init__(self,plist):
-		self.X 		= plist[0]
-		self.Y 		= plist[1]
-		self.radius		= plist[2]
+	def __init__(self,plist,um_per_pxX,um_per_pxY):
+		self.X 		= abs(plist[0] * um_per_pxX)
+		self.Y 		= abs(plist[1] * um_per_pxY)
+		self.radius		= plist[2] * um_per_pxY
 		self.corearea	= plist[3]
+		
+	def getX (self):
+		return self.X
+	def getY (self):
+		return self.Y
+	def getradius (self):
+		return self.radius
+	def getcorearea (self):
+		return self.corearea
+		
+#####################################################
+um_per_pxX = 218.0 / 1510.0
+um_per_pxY = 212.0 / 1446.0
+path = 'Y:/GEM0/'
 #####################################################
 def build_circle_list():
-	file_in = open("circles_merge.txt", 'r')
+	file_in = open(path + "circles.mrg", 'r')
 	datain = file_in.read()
 	circles = json.loads(datain)
 	file_in.close()
 	circle_list = []
 	for entry in circles:
-		circle_list.append(circle (entry))
+		circle_list.append(circle (entry,um_per_pxX,um_per_pxY))
 	return circle_list
-
+	
 if (__name__ == "__main__") :
+	
+	xbin_width_um = 200 
+	xmax_um		  = 15000
+	
 	circle_list = build_circle_list()
 
-	print ("found " + str(len(circle_list)) + "circles")
-
-	circle_group0=[]
-	circle_group1=[]
-	circle_group2=[]
-	circle_group3=[]
-	circle_group4=[]
-	circle_group5=[]
+	print ("found " + str(len(circle_list)) + " circles")
+	
+	XBinsBounds = range (0, xmax_um, xbin_width_um)
+	Xbins=[]
+	for bin in range (0, len(XBinsBounds), 1):
+		Xbins.append ([])
 
 	for circle in circle_list:
-		if ( circle.X > 0 and circle.X < 1701):
-			circle_group0.append(circle.radius)
-		if ( circle.X > 1701 and circle.X < 3376):
-			circle_group1.append(circle.radius)
-		if ( circle.X > 3376 and circle.X < 5077):
-			circle_group2.append(circle.radius)
-		if ( circle.X > 5077 and circle.X < 6779):
-			circle_group3.append(circle.radius)
-		if ( circle.X > 6779 and circle.X < 8480):
-			circle_group4.append(circle.radius)
-		if ( circle.X > 8480):
-			circle_group5.append(circle.radius)
+		
+		for i in range (0, len(XBinsBounds) - 1, 1):
+			if (circle.X > XBinsBounds [i] and circle.X < XBinsBounds [i + 1]):
+				Xbins[i].append(circle.radius)
+				break
+			i = i + 1
+	
+	file_out = open (path + "circles_radius_avg.rep", "w")
+	
+	for Xbin in Xbins[:-1]: 
+		group_radius_avg = 0
 
-	group0_radius_avg = 0
+		for radius in Xbin:
+			group_radius_avg = group_radius_avg + radius
 
-	for radius in circle_group0:
-		group0_radius_avg = group0_radius_avg + radius
-
-	group0_radius_avg = group0_radius_avg / len(circle_group0)
-	print ("group0 radius avg = " + str(group0_radius_avg) )
-
-	group1_radius_avg = 0
-
-	for radius in circle_group1:
-		group1_radius_avg = group1_radius_avg + radius
-
-	group1_radius_avg = group1_radius_avg / len(circle_group1)
-	print ("group1 radius avg = " + str(group1_radius_avg) )
-
-	group2_radius_avg = 0
-
-	for radius in circle_group2:
-		group2_radius_avg = group2_radius_avg + radius
-
-	group2_radius_avg = group2_radius_avg / len(circle_group2)
-	print ("group2 radius avg = " + str(group2_radius_avg) )
-
-	group3_radius_avg = 0
-
-	for radius in circle_group3:
-		group3_radius_avg = group3_radius_avg + radius
-
-	group3_radius_avg = group3_radius_avg / len(circle_group3)
-	print ("group3 radius avg = " + str(group3_radius_avg) )
-
-	group4_radius_avg = 0
-
-	for radius in circle_group4:
-		group4_radius_avg = group4_radius_avg + radius
-
-	group4_radius_avg = group4_radius_avg / len(circle_group4)
-	print ("group4 radius avg = " + str(group4_radius_avg) )
-
-	group5_radius_avg = 0
-
-	for radius in circle_group5:
-		group5_radius_avg = group5_radius_avg + radius
-
-	group5_radius_avg = group5_radius_avg / len(circle_group5)
-	print ("group5 radius avg = " + str(group5_radius_avg) )
+		group_radius_avg = group_radius_avg / len(Xbin)
+		
+		print ("group radius avg = " + str(group_radius_avg) )
+		file_out.write("group radius avg = %.5f\n" %(group_radius_avg))
+		
+	file_out.close()

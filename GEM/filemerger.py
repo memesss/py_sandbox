@@ -1,5 +1,5 @@
-from pathlib import Path
- 
+
+import os  
 def load_data_and_format(file):
 	str = ""
 	f = open(file, 'r')
@@ -11,28 +11,27 @@ def load_data_and_format(file):
 	return str
 	
 def list_files (path,extension):
-	p = Path(path)
-	list( p.glob('**/*.txt'))
+	files = [path + f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+	print ('listfiles() found ' + str(len(files)) + ' ".' + extension + '" files in folder ' + path)
+	print (files[0])
+	print ('.........')
+	print (files[-1])
+	return files
 
 if (__name__ == "__main__"):
+	
+	path = 'Y:/GEM0/'
+	
+	files = list_files(path,'txt')
 
-	list_files('.','txt')
-
-	fdest = open("circles_merge.txt", 'w')
+	fdest = open(path + "circles.mrg", 'w')
 
 	fdest.write('[')
 
-	fdest.write(load_data_and_format("Circles_0_0.txt"))
+	for file in files[:-1]:
+		fdest.write( load_data_and_format(file) )
 
-	fdest.write(load_data_and_format("Circles_1701_0.txt"))
-
-	fdest.write(load_data_and_format("Circles_3376_11.txt"))
-
-	fdest.write(load_data_and_format("Circles_5077_64.txt"))
-
-	fdest.write(load_data_and_format("Circles_6779_121.txt"))
-
-	fdest.write(load_data_and_format("Circles_8480_167.txt")[:-2])
+	fdest.write(load_data_and_format(files[-1])[:-2] )
 
 	fdest.write(']')
 
