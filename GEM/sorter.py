@@ -34,8 +34,11 @@ def build_circle_list():
 	
 if (__name__ == "__main__") :
 	
-	xbin_width_um = 50 
+	xbin_width_um = 100 
 	xmax_um		  = 15000
+	
+	ybin_width_um = 100 
+	ymax_um		  = 15000
 	
 	circle_list = build_circle_list()
 
@@ -46,15 +49,20 @@ if (__name__ == "__main__") :
 	for bin in range (0, len(XBinsBounds), 1):
 		Xbins.append ([])
 
+	YBinsBounds = range (0, ymax_um, ybin_width_um)
+	Ybins=[]
+	for bin in range (0, len(YBinsBounds), 1):
+		Ybins.append ([])
+	#############################################################################
 	for circle in circle_list:
 		
 		for i in range (0, len(XBinsBounds) - 1, 1):
-			if (circle.X > XBinsBounds [i] and circle.X < XBinsBounds [i + 1]):
+			if (circle.X > XBinsBounds [i] and circle.X < XBinsBounds [i + 1] and circle.Y > YBinsBounds [0] and circle.Y < YBinsBounds [1]):
 				Xbins[i].append(circle.radius)
 				break
 			i = i + 1
 	
-	file_out = open (path + "circles_radius_avg.rep", "w")
+	file_out = open (path + "circles_radius_avg_scanX.rep", "w")
 	#############################################################################
 	for Xbin in Xbins[:-1]: 
 		group_radius_avg = 0
@@ -64,7 +72,36 @@ if (__name__ == "__main__") :
 
 		group_radius_avg = group_radius_avg / len(Xbin)
 		
-		print ("group radius avg = " + str(group_radius_avg) )
+		print ("Xgroup radius avg = " + str(group_radius_avg) )
 		file_out.write("group radius avg = %.5f\n" %(group_radius_avg))
 		
 	file_out.close()
+	#############################################################################
+	
+	
+	#############################################################################
+
+
+	for circle in circle_list:
+		
+		for i in range (0, len(YBinsBounds) - 1, 1):
+			if (circle.Y > YBinsBounds [i] and circle.Y < YBinsBounds [i + 1] and circle.Y > YBinsBounds [0] and circle.Y < YBinsBounds [1]):
+				Ybins[i].append(circle.radius)
+				break
+			i = i + 1
+	
+	file_out = open (path + "circles_radius_avg_scanY.rep", "w")
+	#############################################################################
+	for Ybin in Ybins[:-1]: 
+		group_radius_avg = 0
+
+		for radius in Ybin:
+			group_radius_avg = group_radius_avg + radius
+
+		group_radius_avg = group_radius_avg / len(Ybin)
+		
+		print ("Ygroup radius avg = " + str(group_radius_avg) )
+		file_out.write("group radius avg = %.5f\n" %(group_radius_avg))
+		
+	file_out.close()
+	#############################################################################
