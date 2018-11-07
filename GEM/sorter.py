@@ -3,8 +3,8 @@ import json
 #####################################################
 class circle():
 	def __init__(self,plist,um_per_pxX,um_per_pxY):
-		self.X 		= abs(plist[0] * um_per_pxX)
-		self.Y 		= abs(plist[1] * um_per_pxY)
+		self.X 		= (plist[0] + 100140) * um_per_pxX
+		self.Y 		= 	plist[1] * um_per_pxY
 		self.radius		= plist[2] * um_per_pxY
 		self.corearea	= plist[3]
 		
@@ -16,11 +16,19 @@ class circle():
 		return self.radius
 	def getcorearea (self):
 		return self.corearea
+	def getdistance(self,othercircle):
+		return (sqrt ( (self.X - othercircle.X)^2 + (self.Y - othercircle.Y)^2) )
+	def getXdistance(self,othercircle):
+		return abs(self.X - othercircle.X)
+	def getYdistance(self,othercircle):
+		return abs(self.Y - othercircle.Y)
 		
 #####################################################
 um_per_pxX = 218.0 / 1510.0
 um_per_pxY = 212.0 / 1446.0
-path = 'Y:/GEM0/'
+closeby_pixel_search_xdist_um = 70.0 
+closeby_pixel_search_ydist_um = 10.0 
+path = 'V:/GEM0/0/'
 #####################################################
 def build_circle_list():
 	file_in = open(path + "circles.mrg", 'r')
@@ -43,62 +51,102 @@ if (__name__ == "__main__") :
 	circle_list = build_circle_list()
 
 	print ("found " + str(len(circle_list)) + " circles")
+	
+	
 	#############################################################################
 	XBinsBounds = range (0, xmax_um, xbin_width_um)
-	Xbins=[]
+	radiusXbins=[]
 	for bin in range (0, len(XBinsBounds), 1):
-		Xbins.append ([])
-
+		radiusXbins.append ([])
+	
 	YBinsBounds = range (0, ymax_um, ybin_width_um)
-	Ybins=[]
+	radiusYbins=[]
 	for bin in range (0, len(YBinsBounds), 1):
-		Ybins.append ([])
-	#############################################################################
+		radiusYbins.append ([])
+		
+	print("X Slicing:")
+	circles_slice = []
 	for circle in circle_list:
+		if(circle.Y > YBinsBounds [2] and circle.Y < YBinsBounds [3]):
+			circles_slice.append(circle)
+	#############################################################################
+	for circle in circles_slice:
 		
 		for i in range (0, len(XBinsBounds) - 1, 1):
-			if (circle.X > XBinsBounds [i] and circle.X < XBinsBounds [i + 1] and circle.Y > YBinsBounds [0] and circle.Y < YBinsBounds [1]):
-				Xbins[i].append(circle.radius)
+			if (circle.X > XBinsBounds [i] and circle.X < XBinsBounds [i + 1]):
+				radiusXbins[i].append(circle.radius)
 				break
 			i = i + 1
 	
 	file_out = open (path + "circles_radius_avg_scanX.rep", "w")
 	#############################################################################
-	for Xbin in Xbins[:-1]: 
+	for Xbin in radiusXbins[:-1]: 
 		group_radius_avg = 0
 
 		for radius in Xbin:
 			group_radius_avg = group_radius_avg + radius
 
-		group_radius_avg = group_radius_avg / len(Xbin)
+		if (len(Xbin) > 0 ):
+			group_radius_avg = group_radius_avg / len(Xbin)
 		
 		print ("Xgroup radius avg = " + str(group_radius_avg) )
 		file_out.write("group radius avg = %.5f\n" %(group_radius_avg))
 		
 	file_out.close()
 	#############################################################################
+	pitchXbins = []
+	for bin in range (0, len(XBinsBounds), 1):
+		pitchXbins.append( [] )
+	#############################################################################
+			
+	print("X Pitch Analysis:")
+	for i in range (0, len(XBinsBounds) - 1, 1):
+		print("Bin[%d] (%d,%d)" %(i,XBinsBounds[i],XBinsBounds[i + 1]) )
+		for pivot_circle in circles_slice:
+			for closeby_pixel in circles_slice:
+				tempxdist = closeby_pixel.getXdistance(pivot_circle)
+				tempydist = closeby_pixel.getYdistance(pivot_circle)
+				if( tempxdist<= closeby_pixel_search_xdist_um and tempxdist > 0 and abs(tempydist) < closeby_pixel_search_ydist_um):
+					pitchXbins[i].append(tempxdist)
 	
+	file_out = open (path + "circles_pitch_avg_scanX.rep", "w")
+	
+	for pitchXbin in pitchXbins:
+		pitch_avg = 0
+		for pitch in pitchXbin:
+			pitch_avg = pitch_avg + pitch
+		if (len(pitchXbin) > 0 ):
+			pitch_avg = pitch_avg / len(pitchXbin)
+		print ("Xgroup pitch avg = " + str(pitch) )
+		file_out.write("group pitch avg = %.5f\n" %(group_radius_avg))
+		
+	file_out.close()
 	
 	#############################################################################
-
-
+	print("Y Slicing:")
+	circles_slice = []
 	for circle in circle_list:
+		if(circle.Y > XBinsBounds [2] and circle.Y < XBinsBounds [3]):
+			circles_slice.append(circle)
+	#############################################################################
+	for circle in circles_slice:
 		
 		for i in range (0, len(YBinsBounds) - 1, 1):
-			if (circle.Y > YBinsBounds [i] and circle.Y < YBinsBounds [i + 1] and circle.Y > YBinsBounds [0] and circle.Y < YBinsBounds [1]):
-				Ybins[i].append(circle.radius)
+			if (circle.Y > YBinsBounds [i] and circle.Y < YBinsBounds [i + 1]):
+				radiusYbins[i].append(circle.radius)
 				break
 			i = i + 1
 	
 	file_out = open (path + "circles_radius_avg_scanY.rep", "w")
 	#############################################################################
-	for Ybin in Ybins[:-1]: 
+	for Ybin in radiusYbins[:-1]: 
 		group_radius_avg = 0
 
 		for radius in Ybin:
 			group_radius_avg = group_radius_avg + radius
 
-		group_radius_avg = group_radius_avg / len(Ybin)
+		if (len(Ybin) > 0 ):
+			group_radius_avg = group_radius_avg / len(Ybin)
 		
 		print ("Ygroup radius avg = " + str(group_radius_avg) )
 		file_out.write("group radius avg = %.5f\n" %(group_radius_avg))

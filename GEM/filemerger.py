@@ -20,7 +20,7 @@ def list_files (path,extension):
 
 if (__name__ == "__main__"):
 	
-	path = 'Y:/GEM0/'
+	path = 'V:/GEM_FM2_422/'
 	
 	files = list_files(path,'txt')
 
