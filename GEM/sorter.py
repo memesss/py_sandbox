@@ -3,7 +3,7 @@ import json
 #####################################################
 class circle():
 	def __init__(self,plist,um_per_pxX,um_per_pxY):
-		self.X 		= (plist[0] + 100140) * um_per_pxX
+		self.X 		= (plist[0] + 100500) * um_per_pxX
 		self.Y 		= 	plist[1] * um_per_pxY
 		self.radius		= plist[2] * um_per_pxY
 		self.corearea	= plist[3]
@@ -26,9 +26,10 @@ class circle():
 #####################################################
 um_per_pxX = 218.0 / 1510.0
 um_per_pxY = 212.0 / 1446.0
-closeby_pixel_search_xdist_um = 70.0 
-closeby_pixel_search_ydist_um = 10.0 
-path = 'V:/GEM0/0/'
+closeby_pixel_search_xdist_um_max = 55.0
+closeby_pixel_search_xdist_um_min = 30.0 
+
+path = 'V:/GEM_FM2_422/'
 #####################################################
 def build_circle_list():
 	file_in = open(path + "circles.mrg", 'r')
@@ -45,7 +46,7 @@ if (__name__ == "__main__") :
 	xbin_width_um = 100 
 	xmax_um		  = 15000
 	
-	ybin_width_um = 100 
+	ybin_width_um = 45 
 	ymax_um		  = 15000
 	
 	circle_list = build_circle_list()
@@ -64,11 +65,12 @@ if (__name__ == "__main__") :
 	for bin in range (0, len(YBinsBounds), 1):
 		radiusYbins.append ([])
 		
-	print("X Slicing:")
+
 	circles_slice = []
 	for circle in circle_list:
-		if(circle.Y > YBinsBounds [2] and circle.Y < YBinsBounds [3]):
+		if(circle.Y > YBinsBounds [10] and circle.Y < YBinsBounds [11]):
 			circles_slice.append(circle)
+	print("X Slicing found %d circles:" %(len (circles_slice)))
 	#############################################################################
 	for circle in circles_slice:
 		
@@ -101,13 +103,13 @@ if (__name__ == "__main__") :
 			
 	print("X Pitch Analysis:")
 	for i in range (0, len(XBinsBounds) - 1, 1):
-		print("Bin[%d] (%d,%d)" %(i,XBinsBounds[i],XBinsBounds[i + 1]) )
+		
 		for pivot_circle in circles_slice:
 			for closeby_pixel in circles_slice:
 				tempxdist = closeby_pixel.getXdistance(pivot_circle)
-				tempydist = closeby_pixel.getYdistance(pivot_circle)
-				if( tempxdist<= closeby_pixel_search_xdist_um and tempxdist > 0 and abs(tempydist) < closeby_pixel_search_ydist_um):
+				if( tempxdist<= closeby_pixel_search_xdist_um_max and tempxdist > closeby_pixel_search_xdist_um_min and pivot_circle.X > XBinsBounds [i] and pivot_circle.X < XBinsBounds [i + 1]):
 					pitchXbins[i].append(tempxdist)
+		print("Bin[%d] (%d,%d) found %d pitches" %(i,XBinsBounds[i],XBinsBounds[i + 1], len(pitchXbins[i])) )
 	
 	file_out = open (path + "circles_pitch_avg_scanX.rep", "w")
 	
@@ -118,7 +120,7 @@ if (__name__ == "__main__") :
 		if (len(pitchXbin) > 0 ):
 			pitch_avg = pitch_avg / len(pitchXbin)
 		print ("Xgroup pitch avg = " + str(pitch) )
-		file_out.write("group pitch avg = %.5f\n" %(group_radius_avg))
+		file_out.write("group pitch avg = %.5f\n" %(pitch))
 		
 	file_out.close()
 	
