@@ -23,7 +23,7 @@ HANDLE hComm;
 /**********************************************************************/
 int serial_open (std::string port, int baudrate){
 
-	std::string port_string = "\\\\\\\\.\\\\" + port;
+	std::string port_string = "\\\\.\\" + port;
 
 	hComm = CreateFile( port_string.c_str(),                //port name
 	                      GENERIC_READ | GENERIC_WRITE, //Read/Write
@@ -36,7 +36,19 @@ int serial_open (std::string port, int baudrate){
   if (hComm == INVALID_HANDLE_VALUE)
       std::cout << "Error in opening serial port " << port_string << std::endl;
   else
-      std::cout << "opening serial port " << port_string << " successful" << std::endl;
+  {
+  std::cout << "opening serial port " << port_string << " successful" << std::endl;
+  DCB dcbSerialParams = { 0 }; // Initializing DCB structure
+  dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+
+  GetCommState(hComm, &dcbSerialParams);
+
+  dcbSerialParams.BaudRate = baudrate;  // Setting BaudRate
+  dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
+  dcbSerialParams.StopBits = ONESTOPBIT;// Setting StopBits = 1
+  dcbSerialParams.Parity   = NOPARITY;  // Setting Parity = None
+
+  SetCommState(hComm, &dcbSerialParams);}
 
 return 1;
 }
@@ -62,7 +74,7 @@ void print_help(){
 /**********************************************************************/
 void *rxthread_job (void* par){
 	char TempChar; //Temporary character used for reading
-	DWORD NoBytesRead = 1;
+	DWORD NoBytesRead = 0;
 	int lpar = *(int*)par;
 
 	std::cout << "rx Thread Started " << lpar << std::endl;
@@ -74,7 +86,8 @@ void *rxthread_job (void* par){
 		             sizeof(TempChar),//Size of TempChar
 		             &NoBytesRead,    //Number of bytes read
 		             NULL);
-		   std::cout << TempChar;}
+		   if(NoBytesRead)
+		    std::cout << TempChar;}
 
 	return NULL;
 }
@@ -126,7 +139,7 @@ int main(int argc, char** argv) {
 	if (argc >2)
 		baudrate = atoi (argv[2]);
 	else
-		baudrate = 9600;
+		baudrate = 115200;
 	/*********************/
 	serial_open(port, baudrate);
 
