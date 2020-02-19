@@ -16,10 +16,12 @@
 
 #include <windows.h>
 
-int kill_kb = 0, kill_tx = 0, kill_rx = 0;
+int kill_kb = 0, kill_tx = 0, kill_rx = 0, kill_proc = 0;
+enum outputmode_t {FULL, STAT1};
 
 HANDLE hComm;
-
+outputmode_t output_mode;	//define the output format
+std::stringstream  in_str;  //used to dump data from the serial
 /**********************************************************************/
 int serial_open (std::string port, int baudrate){
 
@@ -87,7 +89,45 @@ void *rxthread_job (void* par){
 		             &NoBytesRead,    //Number of bytes read
 		             NULL);
 		   if(NoBytesRead)
-		    std::cout << TempChar;}
+		    in_str << TempChar;}
+
+	return NULL;
+}
+/**********************************************************************/
+void *procthread_job (void* par){
+	std::string templine = "";
+	int Xmin, Xmax, Ymin, Ymax;
+	int ROI_rows, ROI_cols;
+	while (!kill_proc){
+
+		getline(in_str, templine);
+
+
+		if (templine.find("ROI") != std::string::npos){
+			//ROI coordinates section
+			std::stringstream tempstream(templine);
+			 tempstream >> Xmin; tempstream >> Xmax; tempstream >> Ymin; tempstream >> Ymax;
+			 std::cout << "Xmin, Xmax,Ymin,Ymax" << Xmin << Xmax << Ymin << Ymax << std::endl;
+			}
+
+		else if (templine.find("event data") != std::string::npos){
+			//event data
+			ROI_rows = 0; ROI_cols = 0;
+
+			while (templine.find("event end") == std::string::npos && !kill_proc){
+				getline(in_str, templine);
+				ROI_rows++;}
+
+			std::cout << "found event with " << ROI_rows << std::endl;
+			}
+
+		else{
+			std::cout << "Unrecognized TAG: " << templine;
+			}
+
+		templine.clear();
+
+		}
 
 	return NULL;
 }
@@ -125,7 +165,7 @@ void *kbthread_job (void* par){
 
 int main(int argc, char** argv) {
 
-	pthread_t rx_thread, tx_thread, kb_thread;
+	pthread_t rx_thread, tx_thread, kb_thread, proc_thread;
 	std::string port;
 	int baudrate;
 	int par = 5;
@@ -148,6 +188,9 @@ int main(int argc, char** argv) {
 	pthread_create( &tx_thread, NULL, txthread_job, (void*)&par);
 
 	pthread_create( &kb_thread, NULL, kbthread_job, (void*)&par);
+
+	pthread_create( &proc_thread, NULL, procthread_job, (void*)&par);
+
 
 	pthread_join(kb_thread, (void**)&retval);
 
