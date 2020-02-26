@@ -9,7 +9,7 @@ rxqueueLock = threading.Lock()
 
 txQueue = queue.Queue(10)
 rxQueue = queue.Queue(10)
-serial = serial.Serial(port = "COM7", baudrate=9600, timeout = 1)
+serial = serial.Serial(port = "COM15", baudrate=115200, timeout = 1)
 EndTaskString = "QUIT"
 ##################################################################
 ##################################################################

@@ -10,6 +10,7 @@
 #include <windows.h>
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -22,6 +23,7 @@ enum outputmode_t {FULL, STAT1};
 HANDLE hComm;
 outputmode_t output_mode;	//define the output format
 std::stringstream  in_str;  //used to dump data from the serial
+sem_t wr_sm,rd_sm;
 /**********************************************************************/
 int serial_open (std::string port, int baudrate){
 
@@ -44,7 +46,7 @@ int serial_open (std::string port, int baudrate){
   dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 
   GetCommState(hComm, &dcbSerialParams);
-
+  SetupComm(hComm,10000,10000);//Input Buffer Size, Output Buffer Size
   dcbSerialParams.BaudRate = baudrate;  // Setting BaudRate
   dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
   dcbSerialParams.StopBits = ONESTOPBIT;// Setting StopBits = 1
@@ -75,10 +77,13 @@ void print_help(){
 
 /**********************************************************************/
 void *rxthread_job (void* par){
-	char TempChar; //Temporary character used for reading
+	std::string Templine; //Temporary character used for reading
+	char TempChar;
 	DWORD NoBytesRead = 0;
 	int lpar = *(int*)par;
 
+
+	Templine.clear();
 	std::cout << "rx Thread Started " << lpar << std::endl;
 
 	while  (hComm != INVALID_HANDLE_VALUE && !kill_rx){
@@ -88,20 +93,34 @@ void *rxthread_job (void* par){
 		             sizeof(TempChar),//Size of TempChar
 		             &NoBytesRead,    //Number of bytes read
 		             NULL);
-		   if(NoBytesRead)
-		    in_str << TempChar;}
+
+		   if(NoBytesRead){
+			   Templine += TempChar;
+			   if (TempChar=='\n'){
+			   sem_wait(&wr_sm);
+			   in_str << Templine;
+			   sem_post(&rd_sm);}
+		   }
+
+
+		   }
 
 	return NULL;
 }
 /**********************************************************************/
 void *procthread_job (void* par){
-	std::string templine = "";
+	std::string templine;
 	int Xmin, Xmax, Ymin, Ymax;
 	int ROI_rows, ROI_cols;
+	char ch;
 	while (!kill_proc){
+		sem_wait(&rd_sm);
+		getline (in_str, templine);
+		in_str.clear();
+		std::cout << templine << std::endl;
+		sem_post(&wr_sm);
 
-		getline(in_str, templine);
-
+		/*
 
 		if (templine.find("ROI") != std::string::npos){
 			//ROI coordinates section
@@ -110,11 +129,11 @@ void *procthread_job (void* par){
 			 std::cout << "Xmin, Xmax,Ymin,Ymax" << Xmin << Xmax << Ymin << Ymax << std::endl;
 			}
 
-		else if (templine.find("event data") != std::string::npos){
+		else if (templine.find("event data:") != std::string::npos){
 			//event data
 			ROI_rows = 0; ROI_cols = 0;
 
-			while (templine.find("event end") == std::string::npos && !kill_proc){
+			while (templine.find("end of event") == std::string::npos && !kill_proc){
 				getline(in_str, templine);
 				ROI_rows++;}
 
@@ -123,9 +142,7 @@ void *procthread_job (void* par){
 
 		else{
 			std::cout << "Unrecognized TAG: " << templine;
-			}
-
-		templine.clear();
+			}*/
 
 		}
 
@@ -181,6 +198,9 @@ int main(int argc, char** argv) {
 	else
 		baudrate = 115200;
 	/*********************/
+	sem_init(&wr_sm, 0, 1);
+	sem_init(&rd_sm, 0, 0);
+
 	serial_open(port, baudrate);
 
 	pthread_create( &rx_thread, NULL, rxthread_job, (void*)&par);
