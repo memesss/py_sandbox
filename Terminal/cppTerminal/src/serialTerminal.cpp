@@ -26,6 +26,72 @@ HANDLE hComm;
 outputmode_t output_mode;	//define the output format
 std::stringstream  in_str;  //used to dump data from the serial
 sem_t wr_sm,rd_sm;
+
+/**********************************************************************/
+int get_int_at_spot(std::string s,std::string delimiter, unsigned int spot){
+
+	unsigned int found = 0;
+	int a = 0;
+	unsigned int i = 0;
+
+	std::string tempstr;
+	if (spot != 0){
+		do{
+			found = s.find(delimiter,found + 1);
+			i++;}
+		while (i < spot && found < s.npos);
+	}
+
+	if (found != s.npos){
+		tempstr = s.substr(found);
+		std::stringstream ss(tempstr);
+		ss >> a;}
+
+
+	return a;
+}
+/**********************************************************************/
+typedef unsigned int uint;
+typedef std::vector <int> int_vect;
+typedef std::vector <int_vect> roi_vect;
+/**********************************************************************/
+class evt {
+	int xmin;
+	int xmax;
+	int ymin;
+	int ymax;
+	roi_vect roi;
+
+public:
+	evt (uint, uint, uint, uint);
+	int roi_size();
+	int cols();
+	int rows();
+	int add_line (std::string line_str);
+
+};
+
+int evt::roi_size(){
+	return (cols() * rows());}
+
+int evt::cols(){
+	return (xmax - xmin + 1);}
+
+int evt::rows(){
+	return (ymax - ymin +1 );}
+
+int evt::add_line (std::string line_str){
+	int_vect line_vect;
+	int i;
+	for (i = 0; i < cols(); i++)
+	 line_vect.push_back(get_int_at_spot(line_str, " ", i) );
+
+	return i;
+}
+
+evt::evt (uint Xmin, uint Xmax, uint Ymin, uint Ymax){
+	xmin = Xmin; xmax = Xmax; ymin = Ymin; ymax = Ymax;
+}
 /**********************************************************************/
 int serial_open (std::string port, int baudrate){
 
@@ -109,28 +175,7 @@ void *rxthread_job (void* par){
 	return NULL;
 }
 
-/**********************************************************************/
-int get_int_at_spot(std::string s,std::string delimiter, unsigned int spot){
 
-	unsigned int found = 0;
-	int a = 0;
-	unsigned int i = 0;
-
-	std::string tempstr;
-
-	do{
-		found = s.find(delimiter,found + 1);
-		i++;}
-	while (i < spot && found < s.npos);
-
-	if (found != s.npos){
-		tempstr = s.substr(found);
-		std::stringstream ss(tempstr);
-		ss >> a;}
-
-
-	return a;
-}
 /**********************************************************************/
 void *procthread_job (void* par){
 	std::string templine;
@@ -147,7 +192,7 @@ void *procthread_job (void* par){
 		in_str.clear();
 
 		sem_post(&wr_sm);
-
+		/*********************************************/
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
 			std::cout << "identified ROI:";
@@ -155,7 +200,7 @@ void *procthread_job (void* par){
 			std::cout << " " << get_int_at_spot(templine," ", 8) << " " << get_int_at_spot(templine," ", 9);
 			std::cout << std::endl;
 			}
-
+		/*********************************************/
 		else if (templine.find("event data:") != templine.npos){
 			//event data
 			ROI_rows = 0; ROI_cols = 0;
@@ -166,7 +211,7 @@ void *procthread_job (void* par){
 			ROI_rows--;
 			std::cout << "found event with " << ROI_rows << std::endl;
 			}
-
+		/*********************************************/
 		else{
 			std::cout << "Unrecognized TAG: " << templine << std::endl;
 			}
