@@ -14,6 +14,8 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
+#include <cstdlib>
 
 #include <windows.h>
 
@@ -46,7 +48,6 @@ int serial_open (std::string port, int baudrate){
   dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 
   GetCommState(hComm, &dcbSerialParams);
-  SetupComm(hComm,10000,10000);//Input Buffer Size, Output Buffer Size
   dcbSerialParams.BaudRate = baudrate;  // Setting BaudRate
   dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
   dcbSerialParams.StopBits = ONESTOPBIT;// Setting StopBits = 1
@@ -71,7 +72,7 @@ int serial_tx(){
 
 /**********************************************************************/
 void print_help(){
-	std::cout << "'QUIT' to quit" << std::endl;
+	std::cout << "'quit' to quit" << std::endl;
 	std::cout << "'h', 'help' for this list" << std::endl;
 }
 
@@ -107,42 +108,68 @@ void *rxthread_job (void* par){
 
 	return NULL;
 }
+
+/**********************************************************************/
+int get_int_at_spot(std::string s,std::string delimiter, unsigned int spot){
+
+	unsigned int found = 0;
+	int a = 0;
+	unsigned int i = 0;
+
+	std::string tempstr;
+
+	do{
+		found = s.find(delimiter,found + 1);
+		i++;}
+	while (i < spot && found < s.npos);
+
+	if (found != s.npos){
+		tempstr = s.substr(found);
+		std::stringstream ss(tempstr);
+		ss >> a;}
+
+
+	return a;
+}
 /**********************************************************************/
 void *procthread_job (void* par){
 	std::string templine;
 	int Xmin, Xmax, Ymin, Ymax;
 	int ROI_rows, ROI_cols;
 	char ch;
+
+
+
+
 	while (!kill_proc){
 		sem_wait(&rd_sm);
 		getline (in_str, templine);
 		in_str.clear();
-		std::cout << templine << std::endl;
+
 		sem_post(&wr_sm);
 
-		/*
-
-		if (templine.find("ROI") != std::string::npos){
+		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
-			std::stringstream tempstream(templine);
-			 tempstream >> Xmin; tempstream >> Xmax; tempstream >> Ymin; tempstream >> Ymax;
-			 std::cout << "Xmin, Xmax,Ymin,Ymax" << Xmin << Xmax << Ymin << Ymax << std::endl;
+			std::cout << "identified ROI:";
+			std::cout << " " << get_int_at_spot(templine," ", 6) << " " << get_int_at_spot(templine," ", 7);
+			std::cout << " " << get_int_at_spot(templine," ", 8) << " " << get_int_at_spot(templine," ", 9);
+			std::cout << std::endl;
 			}
 
-		else if (templine.find("event data:") != std::string::npos){
+		else if (templine.find("event data:") != templine.npos){
 			//event data
 			ROI_rows = 0; ROI_cols = 0;
-
-			while (templine.find("end of event") == std::string::npos && !kill_proc){
+			do{
 				getline(in_str, templine);
 				ROI_rows++;}
-
+			while (templine.find("end of event") == templine.npos && !kill_proc);
+			ROI_rows--;
 			std::cout << "found event with " << ROI_rows << std::endl;
 			}
 
 		else{
-			std::cout << "Unrecognized TAG: " << templine;
-			}*/
+			std::cout << "Unrecognized TAG: " << templine << std::endl;
+			}
 
 		}
 
@@ -168,7 +195,7 @@ void *kbthread_job (void* par){
 
 		std::cout << "You Typed: " << kbstr << std::endl;
 
-		if (kbstr == "QUIT"){
+		if (kbstr == "quit"){
 			kill_kb = 1;
 			kill_rx = 1;
 			kill_tx = 1;
@@ -210,7 +237,6 @@ int main(int argc, char** argv) {
 	pthread_create( &kb_thread, NULL, kbthread_job, (void*)&par);
 
 	pthread_create( &proc_thread, NULL, procthread_job, (void*)&par);
-
 
 	pthread_join(kb_thread, (void**)&retval);
 
