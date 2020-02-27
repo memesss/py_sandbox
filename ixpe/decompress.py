@@ -16,12 +16,31 @@ def check_if_continue (byte):
         return False
     else
         return True
+        
+def get_zeros_from_single_byte(byte):
+    return (~zeros_mask & byte)
+    
+def get_zeros_from_hbyte(byte):
+    return (~zeros_mask & byte & ~continue_mask)
 
 print ("commpressed_stream.len()->", len(compressed_stream))
 
 mono_uncomp_roi = []
-
+i = 0;
 for item in compressed_stream:
-    if check_if_zeros(item) and item & continue_mask :
+    if check_if_zeros(item) and not check_if_continue(item):
+        for z in range (0, get_zeros_from_single_byte(item)):
+            mono_uncomp_roi.append (0)
+        i = i + 1
+    else if check_if_zeros(item) and check_if_continue(item):
+        lbyte = compressed_stream[i + 1]
+        hbyte = get_zeros_from_hbyte(item)
+        zeros = hbyte * 256 + lbyte
+        for z in range (0, zeros):
+            mono_uncomp_roi.append (0)
+        
+        i = i + 2
+        
+    else if 
         
     
