@@ -30,10 +30,9 @@ sem_t wr_sm,rd_sm;
 /**********************************************************************/
 int get_int_at_spot(std::string s,std::string delimiter, unsigned int spot){
 
-	unsigned int found = 0;
+	size_t found = 0;
 	int a = 0;
 	unsigned int i = 0;
-
 	std::string tempstr;
 	if (spot != 0){
 		do{
@@ -69,7 +68,7 @@ public:
 	int cols();
 	int rows();
 	int add_line (std::string line_str);
-	print();
+	void print();
 
 };
 
@@ -85,17 +84,22 @@ int evt::rows(){
 int evt::add_line (std::string line_str){
 	int_vect line_vect;
 	int i;
+	std::cout << line_str << std::endl;
 	for (i = 0; i < cols(); i++)
-	 line_vect.push_back(get_int_at_spot(line_str, " ", i) );
+	 line_vect.push_back( get_int_at_spot(line_str," ", i) );
 	roi.push_back(line_vect);
 	return i;
 }
 
-evt::print(){
-	for (uint r = 0; r < rows(); r++)
-		for (uint c = 0; c < cols(); r++)
-			std::cout << " %4d" << roi[r][c] << std::endl;
+void evt::print(){
+	roi_vect::iterator r_it;
+	int_vect::iterator c_it;
+
+	for (r_it = roi.begin(); r_it != roi.end(); ++r_it){
+		for (c_it = r_it->begin(); c_it != r_it->end(); ++c_it)
+			std::cout << *c_it << " ";
 		std::cout << std::endl;
+	}
 }
 
 evt::evt (uint Xmin, uint Xmax, uint Ymin, uint Ymax){
@@ -188,10 +192,9 @@ void *rxthread_job (void* par){
 /**********************************************************************/
 void *procthread_job (void* par){
 	std::string templine;
-	int xmin, xmax, ymin, ymax;
+	int xmin = 0, xmax = 0, ymin = 0, ymax = 0;
 	int ROI_rows, ROI_cols;
 	char ch;
-
 
 
 
@@ -204,22 +207,24 @@ void *procthread_job (void* par){
 		/*********************************************/
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
-			std::cout << "identified ROI:";
+			std::cout << "found ROI" << std::endl;
 			xmin =  get_int_at_spot(templine," ", 6); xmax = get_int_at_spot(templine," ", 7);
-			ymin =  get_int_at_spot(templine," ", 8); ymin = get_int_at_spot(templine," ", 9);
-			std::cout << std::endl;
+			ymin =  get_int_at_spot(templine," ", 8); ymax = get_int_at_spot(templine," ", 9);
 			}
 		/*********************************************/
 		else if (templine.find("event data:") != templine.npos){
 			//event data
 			evt event(xmin,xmax,ymin,ymax);
+			std::cout << "found event with " << event.rows() << " rows and " ;
+			std::cout << event.cols() << " cols -> "<< event.roi_size() <<std::endl;
 			do{
 				getline(in_str, templine);
-
-				event.add_line(templine);}
+				if(templine.find("end of event") == templine.npos)
+					event.add_line(templine);
+				}
 			while (templine.find("end of event") == templine.npos && !kill_proc);
 
-			std::cout << "found event with " << event.rows() << "rows and " << event.cols() << std::endl;
+
 			event.print();
 			}
 		/*********************************************/
