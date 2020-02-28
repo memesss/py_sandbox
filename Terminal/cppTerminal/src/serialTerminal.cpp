@@ -60,14 +60,16 @@ class evt {
 	int xmax;
 	int ymin;
 	int ymax;
-	roi_vect roi;
+
 
 public:
+	roi_vect roi;
 	evt (uint, uint, uint, uint);
 	int roi_size();
 	int cols();
 	int rows();
 	int add_line (std::string line_str);
+	print();
 
 };
 
@@ -85,8 +87,15 @@ int evt::add_line (std::string line_str){
 	int i;
 	for (i = 0; i < cols(); i++)
 	 line_vect.push_back(get_int_at_spot(line_str, " ", i) );
-
+	roi.push_back(line_vect);
 	return i;
+}
+
+evt::print(){
+	for (uint r = 0; r < rows(); r++)
+		for (uint c = 0; c < cols(); r++)
+			std::cout << " %4d" << roi[r][c] << std::endl;
+		std::cout << std::endl;
 }
 
 evt::evt (uint Xmin, uint Xmax, uint Ymin, uint Ymax){
@@ -179,7 +188,7 @@ void *rxthread_job (void* par){
 /**********************************************************************/
 void *procthread_job (void* par){
 	std::string templine;
-	int Xmin, Xmax, Ymin, Ymax;
+	int xmin, xmax, ymin, ymax;
 	int ROI_rows, ROI_cols;
 	char ch;
 
@@ -196,20 +205,22 @@ void *procthread_job (void* par){
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
 			std::cout << "identified ROI:";
-			std::cout << " " << get_int_at_spot(templine," ", 6) << " " << get_int_at_spot(templine," ", 7);
-			std::cout << " " << get_int_at_spot(templine," ", 8) << " " << get_int_at_spot(templine," ", 9);
+			xmin =  get_int_at_spot(templine," ", 6); xmax = get_int_at_spot(templine," ", 7);
+			ymin =  get_int_at_spot(templine," ", 8); ymin = get_int_at_spot(templine," ", 9);
 			std::cout << std::endl;
 			}
 		/*********************************************/
 		else if (templine.find("event data:") != templine.npos){
 			//event data
-			ROI_rows = 0; ROI_cols = 0;
+			evt event(xmin,xmax,ymin,ymax);
 			do{
 				getline(in_str, templine);
-				ROI_rows++;}
+
+				event.add_line(templine);}
 			while (templine.find("end of event") == templine.npos && !kill_proc);
-			ROI_rows--;
-			std::cout << "found event with " << ROI_rows << std::endl;
+
+			std::cout << "found event with " << event.rows() << "rows and " << event.cols() << std::endl;
+			event.print();
 			}
 		/*********************************************/
 		else{
