@@ -189,20 +189,29 @@ void *rxthread_job (void* par){
 
 
 /**********************************************************************/
+void popline(std::string &templine){
+	sem_wait(&rd_sm);
+	getline (in_str, templine);
+	in_str.clear();
+	sem_post(&wr_sm);
+	}
+
+int check_string(std::string templine, std::string test_str){
+	size_t shorter = templine.size();
+	if (shorter > test_str.size()) shorter = test_str.size();
+    return templine.compare(0,shorter,test_str);
+}
+/********************************************************************/
 void *procthread_job (void* par){
 	std::string templine;
 	int xmin = 0, xmax = 0, ymin = 0, ymax = 0;
-	int ROI_rows, ROI_cols;
-	char ch;
+
 
 
 
 	while (!kill_proc){
 		/********************/
-		sem_wait(&rd_sm);
-		getline (in_str, templine);
-		in_str.clear();
-		sem_post(&wr_sm);
+		popline(templine);
 		/*********************************************/
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
@@ -211,28 +220,24 @@ void *procthread_job (void* par){
 			ymin =  get_int_at_spot(templine," ", 8); ymax = get_int_at_spot(templine," ", 9);
 
 			/********************/
-			sem_wait(&rd_sm);
-			getline (in_str, templine);
-			in_str.clear();
-			sem_post(&wr_sm);
+			popline(templine);
 			/********************/
-			if (templine.find("event data:") != templine.npos){
+			if (check_string(templine,"event data:")  == 0){
+
 			//event data
 			evt event(xmin,xmax,ymin,ymax);
 			std::cout << "found event with " << event.rows() << " rows and " ;
 			std::cout << event.cols() << " cols -> "<< event.roi_size() <<std::endl;
+
 			do{
 				/********************/
-				sem_wait(&rd_sm);
-				getline (in_str, templine);
-				in_str.clear();
-				sem_post(&wr_sm);
+				popline(templine);
 				/********************/
 
-				if(templine.find("end of event") == templine.npos)
+				if(check_string(templine,"end of event") != 0)
 					event.add_line(templine);
 				}
-			while (templine.find("end of event") == templine.npos && !kill_proc);
+			while (check_string(templine,"end of event") != 0 && !kill_proc);
 
 			}
 		}
