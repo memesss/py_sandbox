@@ -84,7 +84,6 @@ int evt::rows(){
 int evt::add_line (std::string line_str){
 	int_vect line_vect;
 	int i;
-	std::cout << line_str << std::endl;
 	for (i = 0; i < cols(); i++)
 	 line_vect.push_back( get_int_at_spot(line_str," ", i) );
 	roi.push_back(line_vect);
@@ -125,7 +124,7 @@ int serial_open (std::string port, int baudrate){
   std::cout << "opening serial port " << port_string << " successful" << std::endl;
   DCB dcbSerialParams = { 0 }; // Initializing DCB structure
   dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-
+  SetupComm(hComm,10000,1000);
   GetCommState(hComm, &dcbSerialParams);
   dcbSerialParams.BaudRate = baudrate;  // Setting BaudRate
   dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
@@ -199,10 +198,10 @@ void *procthread_job (void* par){
 
 
 	while (!kill_proc){
+		/********************/
 		sem_wait(&rd_sm);
 		getline (in_str, templine);
 		in_str.clear();
-
 		sem_post(&wr_sm);
 		/*********************************************/
 		if (templine.find("ROI") != templine.npos){
@@ -210,30 +209,40 @@ void *procthread_job (void* par){
 			std::cout << "found ROI" << std::endl;
 			xmin =  get_int_at_spot(templine," ", 6); xmax = get_int_at_spot(templine," ", 7);
 			ymin =  get_int_at_spot(templine," ", 8); ymax = get_int_at_spot(templine," ", 9);
-			}
-		/*********************************************/
-		else if (templine.find("event data:") != templine.npos){
+
+			/********************/
+			sem_wait(&rd_sm);
+			getline (in_str, templine);
+			in_str.clear();
+			sem_post(&wr_sm);
+			/********************/
+			if (templine.find("event data:") != templine.npos){
 			//event data
 			evt event(xmin,xmax,ymin,ymax);
 			std::cout << "found event with " << event.rows() << " rows and " ;
 			std::cout << event.cols() << " cols -> "<< event.roi_size() <<std::endl;
 			do{
-				getline(in_str, templine);
+				/********************/
+				sem_wait(&rd_sm);
+				getline (in_str, templine);
+				in_str.clear();
+				sem_post(&wr_sm);
+				/********************/
+
 				if(templine.find("end of event") == templine.npos)
 					event.add_line(templine);
 				}
 			while (templine.find("end of event") == templine.npos && !kill_proc);
 
-
-			event.print();
 			}
+		}
 		/*********************************************/
-		else{
+		else
 			std::cout << "Unrecognized TAG: " << templine << std::endl;
-			}
+
+
 
 		}
-
 	return NULL;
 }
 /**********************************************************************/
