@@ -16,7 +16,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdlib>
-
+#include <iomanip>
 #include <windows.h>
 
 int kill_kb = 0, kill_tx = 0, kill_rx = 0, kill_proc = 0;
@@ -86,6 +86,7 @@ int evt::add_line (std::string line_str){
 	int i;
 	for (i = 0; i < cols(); i++)
 	 line_vect.push_back( get_int_at_spot(line_str," ", i) );
+
 	roi.push_back(line_vect);
 	return i;
 }
@@ -96,7 +97,7 @@ void evt::print(){
 
 	for (r_it = roi.begin(); r_it != roi.end(); ++r_it){
 		for (c_it = r_it->begin(); c_it != r_it->end(); ++c_it)
-			std::cout << *c_it << " ";
+			std::cout << std::setfill(' ') << std::setw(4) << *c_it << " ";
 		std::cout << std::endl;
 	}
 }
@@ -124,7 +125,7 @@ int serial_open (std::string port, int baudrate){
   std::cout << "opening serial port " << port_string << " successful" << std::endl;
   DCB dcbSerialParams = { 0 }; // Initializing DCB structure
   dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-  SetupComm(hComm,10000,1000);
+
   GetCommState(hComm, &dcbSerialParams);
   dcbSerialParams.BaudRate = baudrate;  // Setting BaudRate
   dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
@@ -178,6 +179,7 @@ void *rxthread_job (void* par){
 			   if (TempChar=='\n'){
 			   sem_wait(&wr_sm);
 			   in_str << Templine;
+			   Templine.clear();
 			   sem_post(&rd_sm);}
 		   }
 
@@ -216,9 +218,10 @@ void *procthread_job (void* par){
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
 			std::cout << "found ROI" << std::endl;
+
 			xmin =  get_int_at_spot(templine," ", 6); xmax = get_int_at_spot(templine," ", 7);
 			ymin =  get_int_at_spot(templine," ", 8); ymax = get_int_at_spot(templine," ", 9);
-
+			std::cout << xmin <<" " <<xmax <<" "<< ymin << " " << ymax << std::endl;
 			/********************/
 			popline(templine);
 			/********************/
@@ -238,8 +241,10 @@ void *procthread_job (void* par){
 					event.add_line(templine);
 				}
 			while (check_string(templine,"end of event") != 0 && !kill_proc);
+			event.print();
 
 			}
+
 		}
 		/*********************************************/
 		else
