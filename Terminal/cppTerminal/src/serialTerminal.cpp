@@ -27,7 +27,7 @@ SComm *Serial;
 outputmode_t output_mode;	//define the output format
 std::stringstream  in_str;  //used to dump data from the serial
 sem_t wr_sm,rd_sm;
-
+unsigned int event_counter;
 /**********************************************************************/
 void print_help(){
 	std::cout << "'quit' to quit" << std::endl;
@@ -83,11 +83,10 @@ void *collectorthread_job (void* par){
 		/*********************************************/
 		if (templine.find("ROI") != templine.npos){
 			//ROI coordinates section
-			std::cout << "found ROI" << std::endl;
 
 			xmin =  get_int_at_spot(templine," ", 6); xmax = get_int_at_spot(templine," ", 7);
 			ymin =  get_int_at_spot(templine," ", 8); ymax = get_int_at_spot(templine," ", 9);
-			std::cout << xmin <<" " <<xmax <<" "<< ymin << " " << ymax << std::endl;
+
 			/********************/
 			popline(templine);
 			/********************/
@@ -105,8 +104,8 @@ void *collectorthread_job (void* par){
 					evt.add_line(templine);
 				}
 			while (check_string(templine,"end of event") != 0 && !kill_proc);
-
-			float pha = evt.get_pha(50.0);
+			event_counter ++;
+			float pha = evt.get_pha(130.0);
 					if (pha){
 						 std::cout << "event pha > " << pha << " @ time " << ctime(&evt.timestamp) << std::endl;
 						 evt.print();
@@ -114,13 +113,6 @@ void *collectorthread_job (void* par){
 				}
 
 			}
-
-		/*********************************************/
-		else
-			std::cout << "Unrecognized TAG: " << templine << std::endl;
-
-
-
 		}
 	return NULL;
 }
@@ -149,6 +141,9 @@ void *kbthread_job (void* par){
 			kill_rx = 1;
 			kill_tx = 1;
 			}
+		else if (kbstr == "stat"){
+			std :: cout << "event counter->" << event_counter << std::endl;
+		}
 		if (kbstr == "h" || kbstr =="help")
 			print_help();
 		}
@@ -174,6 +169,8 @@ int main(int argc, char** argv) {
 	else
 		baudrate = 115200;
 	/*********************/
+	event_counter = 0;
+
 	sem_init(&wr_sm, 0, 1);
 	sem_init(&rd_sm, 0, 0);
 
