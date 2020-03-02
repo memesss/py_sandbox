@@ -37,9 +37,25 @@ void event::print(){
 		std::cout << std::endl;
 	}
 }
+/****************************************************/
+float event::get_pha(float threshold){
+	float acc = 0.0;
+	roi_vect::iterator r_it;
+	int_vect::iterator c_it;
 
+	for (r_it = roi.begin(); r_it != roi.end(); ++r_it){
+
+		for (c_it = r_it->begin(); c_it != r_it->end(); ++c_it)
+
+			if (*c_it >= threshold)
+					acc  += *c_it;
+	}
+	return acc;
+}
+/****************************************************/
 event::event (uint Xmin, uint Xmax, uint Ymin, uint Ymax){
 	xmin = Xmin; xmax = Xmax; ymin = Ymin; ymax = Ymax;
+	time(&timestamp);
 }
 
 event::~event() {

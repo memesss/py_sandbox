@@ -17,6 +17,7 @@
 
 #include "SComm.h"
 #include "event.h"
+#include <ctime>
 #include "utilities.h"
 
 int kill_kb = 0, kill_tx = 0, kill_rx = 0, kill_proc = 0;
@@ -72,7 +73,7 @@ int check_string(std::string templine, std::string test_str){
     return templine.compare(0,shorter,test_str);
 }
 /********************************************************************/
-void *procthread_job (void* par){
+void *collectorthread_job (void* par){
 	std::string templine;
 	int xmin = 0, xmax = 0, ymin = 0, ymax = 0;
 
@@ -92,10 +93,8 @@ void *procthread_job (void* par){
 			/********************/
 			if (check_string(templine,"event data:")  == 0){
 
-			//event data
+			//event
 			event evt(xmin,xmax,ymin,ymax);
-			std::cout << "found event with " << evt.rows() << " rows and " ;
-			std::cout << evt.cols() << " cols -> "<< evt.roi_size() <<std::endl;
 
 			do{
 				/********************/
@@ -106,11 +105,16 @@ void *procthread_job (void* par){
 					evt.add_line(templine);
 				}
 			while (check_string(templine,"end of event") != 0 && !kill_proc);
-			evt.print();
+
+			float pha = evt.get_pha(50.0);
+					if (pha){
+						 std::cout << "event pha > " << pha << " @ time " << ctime(&evt.timestamp) << std::endl;
+						 evt.print();
+						}
+				}
 
 			}
 
-		}
 		/*********************************************/
 		else
 			std::cout << "Unrecognized TAG: " << templine << std::endl;
@@ -154,7 +158,7 @@ void *kbthread_job (void* par){
 
 int main(int argc, char** argv) {
 
-	pthread_t rx_thread, tx_thread, kb_thread, proc_thread;
+	pthread_t rx_thread, tx_thread, kb_thread, collector_thread;
 	std::string port;
 	int baudrate;
 	int par = 5;
@@ -175,14 +179,13 @@ int main(int argc, char** argv) {
 
 	Serial = new SComm(port, baudrate);
 
-
 	pthread_create( &rx_thread, NULL, rxthread_job, (void*)&par);
 
 	pthread_create( &tx_thread, NULL, txthread_job, (void*)&par);
 
 	pthread_create( &kb_thread, NULL, kbthread_job, (void*)&par);
 
-	pthread_create( &proc_thread, NULL, procthread_job, (void*)&par);
+	pthread_create( &collector_thread, NULL, collectorthread_job, (void*)&par);
 
 	pthread_join(kb_thread, (void**)&retval);
 	delete(Serial);
