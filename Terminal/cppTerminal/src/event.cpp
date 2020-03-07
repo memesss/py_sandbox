@@ -31,6 +31,8 @@ void event::print(){
 	roi_vect::iterator r_it;
 	int_vect::iterator c_it;
 
+	std::cout << "ROI " << xmin <<" "<< xmax <<" "<< ymin << " " << ymax << std::endl;
+
 	for (r_it = roi.begin(); r_it != roi.end(); ++r_it){
 		for (c_it = r_it->begin(); c_it != r_it->end(); ++c_it)
 			std::cout << std::setfill(' ') << std::setw(4) << *c_it << " ";
@@ -51,6 +53,21 @@ float event::get_pha(float threshold){
 					acc  += *c_it;
 	}
 	return acc;
+}
+/****************************************************/
+float event::get_avg_pha(float threshold){
+	float acc = 0.0;
+	roi_vect::iterator r_it;
+	int_vect::iterator c_it;
+
+	for (r_it = roi.begin(); r_it != roi.end(); ++r_it){
+
+		for (c_it = r_it->begin(); c_it != r_it->end(); ++c_it)
+
+			if (*c_it >= threshold)
+					acc  += *c_it;
+	}
+	return acc/roi_size();
 }
 /****************************************************/
 event::event (uint Xmin, uint Xmax, uint Ymin, uint Ymax){

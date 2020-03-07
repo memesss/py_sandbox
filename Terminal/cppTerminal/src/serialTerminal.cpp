@@ -28,6 +28,8 @@ outputmode_t output_mode;	//define the output format
 std::stringstream  in_str;  //used to dump data from the serial
 sem_t wr_sm,rd_sm;
 unsigned int event_counter;
+unsigned int pha_outliers_counter;
+float pha_avg_avg;
 /**********************************************************************/
 void print_help(){
 	std::cout << "'quit' to quit" << std::endl;
@@ -105,11 +107,22 @@ void *collectorthread_job (void* par){
 				}
 			while (check_string(templine,"end of event") != 0 && !kill_proc);
 			event_counter ++;
-			float pha = evt.get_pha(130.0);
-					if (pha){
-						 std::cout << "event pha > " << pha << " @ time " << ctime(&evt.timestamp) << std::endl;
+			float pha = evt.get_pha(0);
+			float pha_avg = evt.get_avg_pha(0);
+
+			pha_avg_avg = (pha_avg_avg * ((float)event_counter - 1.0) + pha_avg) / (float) event_counter;
+
+					if (pha_avg > 2.507){
+						pha_outliers_counter ++;
+						 std::cout << "event pha > " << pha << "avg >"
+						 << pha_avg <<" @ time " << ctime(&evt.timestamp) << std::endl;
 						 evt.print();
 						}
+					/*if (evt.roi_size()>396){
+						std::cout << "roi size " << evt.roi_size() << " @ time "
+						<< ctime(&evt.timestamp) << std::endl;
+					}*/
+
 				}
 
 			}
@@ -122,6 +135,14 @@ void *txthread_job (void* par){
 	std::cout << "Tx Thread Started " << lpar << std::endl;
 	std::string rxstr = "";
 	return NULL;
+}
+/**********************************************************************/
+void print_stats(){
+	std :: cout << "event counter-> " << event_counter << std::endl;
+	std :: cout << "pha_outliers_counter-> " << pha_outliers_counter
+			<<" "<< 100.0 * float(pha_outliers_counter) / float (event_counter) << "%"
+			<<std::endl;
+	std :: cout << "pha_avg_avg-> " << pha_avg_avg << std::endl;
 }
 /**********************************************************************/
 void *kbthread_job (void* par){
@@ -140,9 +161,10 @@ void *kbthread_job (void* par){
 			kill_kb = 1;
 			kill_rx = 1;
 			kill_tx = 1;
+			print_stats();
 			}
 		else if (kbstr == "stat"){
-			std :: cout << "event counter->" << event_counter << std::endl;
+			print_stats();
 		}
 		if (kbstr == "h" || kbstr =="help")
 			print_help();
@@ -170,7 +192,8 @@ int main(int argc, char** argv) {
 		baudrate = 115200;
 	/*********************/
 	event_counter = 0;
-
+	pha_outliers_counter = 0;
+	pha_avg_avg = 0.0;
 	sem_init(&wr_sm, 0, 1);
 	sem_init(&rd_sm, 0, 0);
 

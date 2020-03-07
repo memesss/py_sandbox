@@ -35,6 +35,7 @@ class event {
 		int rows();
 		int add_line (std::string line_str);
 		float get_pha(float threshold);
+		float get_avg_pha(float threshold);
 		void print();
 		virtual ~event();
 
